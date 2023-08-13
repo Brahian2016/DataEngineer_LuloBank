@@ -1,0 +1,11 @@
+column_name,data_type,unique_values,missing_values,mean,min,max
+id,int64,17,0,44196.16129032258,1505.0,67998.0
+url,object,17,0,,,
+type,object,5,0,,,
+language,object,5,0,,,
+genres,object,5,12,,,
+status,object,3,0,,,
+runtime,float64,10,9,25.09090909090909,7.0,59.0
+averageRuntime,float64,16,0,29.322580645161292,7.0,59.0
+premiered,object,17,0,,,
+ended,object,1,28,,,

@@ -1,0 +1,5 @@
+column_name,data_type,unique_values,missing_values,mean,min,max
+id,int64,31,0,2433710.870967742,2361760.0,2575561.0
+url,object,31,0,,,
+name,object,29,0,,,
+season,int64,7,0,68.93548387096774,1.0,2022.0

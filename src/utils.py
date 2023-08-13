@@ -5,6 +5,11 @@ import json
 from datetime import datetime, timedelta
 
 
+from matplotlib import pyplot as plt
+from reportlab.lib.pagesizes import letter, landscape
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+
 def get_series_by_date(date):
     url = f"http://api.tvmaze.com/schedule/web?date={date}"
     response = requests.get(url)
@@ -34,14 +39,13 @@ def get_series_for_december_2022():
     return all_series
 
 def normalized_json(json_list):
-
     episodes_data = []
     shows_data = []
 
     for json_data in json_list:
         normalized_data = pd.json_normalize(json_data)
 
-        #Extraer datos de episodios
+        # Extraer datos de episodios
         episodes_data.append({
             "id": normalized_data["id"].iloc[0],
             "url": normalized_data["url"].iloc[0],
@@ -50,6 +54,7 @@ def normalized_json(json_list):
         })
 
         # Extraer datos de programas de televisión (si están disponibles)
+
         shows_data.append({
             "id": normalized_data["_embedded.show.id"].iloc[0],
             "url": normalized_data["_embedded.show.url"].iloc[0],
@@ -66,5 +71,65 @@ def normalized_json(json_list):
     episodes_df = pd.DataFrame(episodes_data)
     shows_df = pd.DataFrame(shows_data)
 
-    episodes_df.to_csv('../data/episodes.csv',index = False)
+    episodes_df.to_csv('../data/episodes.csv', index=False)
     shows_df.to_csv('../data/shows.csv', index=False)
+
+    episodes_profiling = profiling(episodes_df)
+    shows_profiling = profiling(shows_df)
+
+    episodes_profiling.to_csv('../profiling/episodes_profiling.csv', index=False)
+    shows_profiling.to_csv('../profiling/shows_profiling.csv', index=False)
+
+    generate_pdf_report(episodes_profiling, '../profiling/episodes_profiling.pdf')
+    generate_pdf_report(shows_profiling, '../profiling/shows_profiling.pdf')
+
+
+def generate_pdf_report(df, filename):
+    doc = SimpleDocTemplate(filename, pagesize=landscape(letter))
+
+    # Convert DataFrame to list of lists
+    data = [df.columns.tolist()] + df.values.tolist()
+
+    # Create table with data
+    table = Table(data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+
+    # Build document and save to file
+    doc.build([table])
+
+def profiling(df):
+    profiling = {
+        'column_name': [],
+        'data_type': [],
+        'unique_values': [],
+        'missing_values': [],
+        'mean': [],
+        'min': [],
+        'max': [],
+    }
+
+    for column in df.columns:
+        profiling['column_name'].append(column)
+        profiling['data_type'].append(df[column].dtype)
+        profiling['unique_values'].append(df[column].nunique())
+        profiling['missing_values'].append(df[column].isnull().sum())
+
+        if pd.api.types.is_numeric_dtype(df[column]):
+            profiling['mean'].append(df[column].mean())
+            profiling['min'].append(df[column].min())
+            profiling['max'].append(df[column].max())
+        else:
+            profiling['mean'].append(None)
+            profiling['min'].append(None)
+            profiling['max'].append(None)
+
+    profiling_df = pd.DataFrame(profiling)
+    return profiling_df
