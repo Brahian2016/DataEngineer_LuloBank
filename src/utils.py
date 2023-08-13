@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 import json
 from datetime import datetime, timedelta
+import pyarrow as pa
+import pyarrow.parquet as pq
+import sqlite3
 
 
 from matplotlib import pyplot as plt
@@ -147,3 +150,86 @@ def clean_data(episodes_df, shows_df):
     episodes_df.drop_duplicates(inplace=True)
 
     return episodes_df, shows_df
+
+
+def save_dataframes_to_parquet(episodes_df, shows_df):
+    # Almacenar los DataFrames en archivos Parquet con compresión Snappy
+    episodes_table = pa.Table.from_pandas(episodes_df)
+    pq.write_table(episodes_table, '../data/episodes.parquet', compression='snappy')
+
+    shows_table = pa.Table.from_pandas(shows_df)
+    pq.write_table(shows_table, '../data/shows.parquet', compression='snappy')
+
+
+def create_database_schema(connection):
+    cursor = connection.cursor()
+
+    # Crear la tabla 'episodes'
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS episodes (
+            id INTEGER PRIMARY KEY,
+            url TEXT,
+            name TEXT,
+            season INTEGER
+        )
+    ''')
+
+    # Crear la tabla 'shows'
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS shows (
+            id INTEGER PRIMARY KEY,
+            url TEXT,
+            type TEXT,
+            language TEXT,
+            genres TEXT,
+            status TEXT,
+            runtime INTEGER,
+            averageRuntime INTEGER,
+            premiered TEXT,
+            ended TEXT
+        )
+    ''')
+
+    connection.commit()
+
+# Conectar a la base de datos
+conn = sqlite3.connect('tv_series.db')
+create_database_schema(conn)
+
+def read_parquet_and_store_in_database():
+    episodes_table = pq.read_table('../data/episodes.parquet')
+    episodes_df = episodes_table.to_pandas()
+
+    shows_table = pq.read_table('../data/shows.parquet')
+    shows_df = shows_table.to_pandas()
+
+    # Conectar a la base de datos
+    conn = sqlite3.connect('../db/tv_series.db')
+
+    # Almacenar datos en la tabla 'episodes'
+    episodes_df.to_sql('episodes', conn, if_exists='replace', index=False)
+
+    # Almacenar datos en la tabla 'shows'
+    shows_df.to_sql('shows', conn, if_exists='replace', index=False)
+
+    conn.close()
+
+def query_database(table_name):
+    # Conectarse a la base de datos
+    db_name = '../db/tv_series.db'
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    # Ejecutar una consulta
+    query = f"SELECT * FROM {table_name}"
+    cursor.execute(query)
+    rows = cursor.fetchall()
+
+    # Imprimir los resultados
+    for row in rows:
+        print(row)
+
+    # Cerrar la conexión
+    conn.close()
+
+
