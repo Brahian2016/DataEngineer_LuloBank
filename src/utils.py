@@ -83,6 +83,8 @@ def normalized_json(json_list):
     generate_pdf_report(episodes_profiling, '../profiling/episodes_profiling.pdf')
     generate_pdf_report(shows_profiling, '../profiling/shows_profiling.pdf')
 
+    return(episodes_df,shows_df)
+
 
 def generate_pdf_report(df, filename):
     doc = SimpleDocTemplate(filename, pagesize=landscape(letter))
@@ -133,3 +135,15 @@ def profiling(df):
 
     profiling_df = pd.DataFrame(profiling)
     return profiling_df
+
+
+
+def clean_data(episodes_df, shows_df):
+    # Tratar valores faltantes en 'averageRuntime'
+    average_runtime_mean = shows_df['averageRuntime'].mean()
+    shows_df['averageRuntime'].fillna(average_runtime_mean, inplace=True)
+
+    # Eliminar filas duplicadas
+    episodes_df.drop_duplicates(inplace=True)
+
+    return episodes_df, shows_df
