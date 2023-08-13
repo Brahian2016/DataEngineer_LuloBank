@@ -214,22 +214,26 @@ def read_parquet_and_store_in_database():
 
     conn.close()
 
-def query_database(table_name):
-    # Conectarse a la base de datos
-    db_name = '../db/tv_series.db'
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
+# ... (código anterior)
 
-    # Ejecutar una consulta
-    query = f"SELECT * FROM {table_name}"
-    cursor.execute(query)
-    rows = cursor.fetchall()
+def aggregate_operations(episodes_df, shows_df):
+    results = {}
 
-    # Imprimir los resultados
-    for row in rows:
-        print(row)
+    # a. Runtime promedio
+    average_runtime = shows_df['runtime'].mean()
+    results['average_runtime'] = average_runtime
 
-    # Cerrar la conexión
-    conn.close()
+    # b. Conteo de shows de TV por género
+    genre_counts = shows_df.explode('genres')['genres'].value_counts().reset_index()
+    genre_counts.columns = ['Genero', 'cantidad']
+    results['genre_counts'] = genre_counts
 
+    # c. Listar los dominios del sitio oficial de los shows
+    def extract_domain(url):
+        return url.split('//')[1].split('/')[0] if url.startswith('http') else None
 
+    shows_df['domain'] = shows_df['url'].apply(extract_domain)
+    unique_domains = shows_df['domain'].dropna().unique()
+    results['unique_domains'] = unique_domains
+
+    return results
